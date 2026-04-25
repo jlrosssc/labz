@@ -1,2 +1,0 @@
-[console_scripts]
-locllm = locllm.cli:cli

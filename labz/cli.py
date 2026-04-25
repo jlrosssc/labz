@@ -1,12 +1,12 @@
 """
-locllm — Local LLM toolkit CLI
+labz — Local LLM toolkit CLI
 
 Subcommands:
-    locllm chat     Chat with a local Ollama model
-    locllm img2md   Convert images/screenshots to Markdown
-    locllm imagine  Generate images from text prompts
-    locllm history  View and manage chat history
-    locllm models   List available local models
+    labz chat     Chat with a local Ollama model
+    labz img2md   Convert images/screenshots to Markdown
+    labz imagine  Generate images from text prompts
+    labz history  View and manage chat history
+    labz models   List available local models
 """
 
 from __future__ import annotations
@@ -34,10 +34,10 @@ OLLAMA_URL_DEFAULT = "http://localhost:11434"
 # ──────────────────────────────────────────────────────────────────────────────
 
 @click.group(invoke_without_command=True, context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(package_name="locllm")
+@click.version_option(package_name="labz")
 @click.pass_context
 def cli(ctx: click.Context) -> None:
-    """locllm — Local LLM toolkit. Run everything on your own machine."""
+    """labz — Local LLM toolkit. Run everything on your own machine."""
     if ctx.invoked_subcommand is None:
         _print_home()
 
@@ -46,7 +46,7 @@ def _print_home() -> None:
     c = Console()
     c.print()
     c.print(Panel.fit(
-        "[bold cyan]locllm[/]  [dim]v0.1.0[/]\n"
+        "[bold cyan]labz[/]  [dim]v0.1.0[/]\n"
         "[white]Local LLM toolkit — runs entirely on your machine.[/]\n"
         "[dim]No API keys. No cloud. No token costs.[/]",
         border_style="cyan", padding=(0, 2),
@@ -67,12 +67,12 @@ def _print_home() -> None:
     ex = Table(show_header=False, box=None, padding=(0, 2), show_edge=False)
     ex.add_column("desc",  style="dim",   min_width=36)
     ex.add_column("cmd",   style="green")
-    ex.add_row("# Start a chat",                        "locllm chat")
-    ex.add_row("# Convert a screenshot to Markdown",    "locllm img2md screenshot.png")
-    ex.add_row("# Ask a question about an image",       'locllm img2md screenshot.png --ask "What errors are shown?"')
-    ex.add_row("# Generate an image",                   'locllm imagine "a sunset over mountains"')
-    ex.add_row("# View chat history",                   "locllm history")
-    ex.add_row("# List all local models",               "locllm models")
+    ex.add_row("# Start a chat",                        "labz chat")
+    ex.add_row("# Convert a screenshot to Markdown",    "labz img2md screenshot.png")
+    ex.add_row("# Ask a question about an image",       'labz img2md screenshot.png --ask "What errors are shown?"')
+    ex.add_row("# Generate an image",                   'labz imagine "a sunset over mountains"')
+    ex.add_row("# View chat history",                   "labz history")
+    ex.add_row("# List all local models",               "labz models")
     c.print(ex)
 
     c.print("\n[bold yellow]OLLAMA SETUP[/]  [dim](needed for chat and img2md --backend ollama)[/]")
@@ -81,11 +81,11 @@ def _print_home() -> None:
         "  [green]ollama pull mistral[/]           [dim]# chat model[/]\n"
         "  [green]ollama pull llama3.2-vision[/]   [dim]# vision model for img2md[/]\n"
     )
-    c.print("[dim]Run 'locllm <command> --help' for full options on any command.[/]\n")
+    c.print("[dim]Run 'labz <command> --help' for full options on any command.[/]\n")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# locllm chat
+# labz chat
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.command()
@@ -107,7 +107,7 @@ def chat(model: Optional[str], private: bool, ollama_url: str) -> None:
 
     chosen = model or _best_chat_model(ollama_url)
     session = new_session()
-    privacy = "[dim red](private — not saved)[/]" if private else f"[dim](saved to ~/.locllm/history)[/]"
+    privacy = "[dim red](private — not saved)[/]" if private else f"[dim](saved to ~/.labz/history)[/]"
 
     console.print(
         f"\n[bold cyan]Chat[/] — model: [dim]{chosen}[/]  {privacy}\n"
@@ -120,7 +120,7 @@ def chat(model: Optional[str], private: bool, ollama_url: str) -> None:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# locllm img2md
+# labz img2md
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.command()
@@ -148,18 +148,18 @@ def img2md(
 
     Examples:
 
-      locllm img2md screenshot.png
+      labz img2md screenshot.png
 
-      locllm img2md screenshot.png notes.md
+      labz img2md screenshot.png notes.md
 
-      locllm img2md screenshot.png --ask "What errors are shown?"
+      labz img2md screenshot.png --ask "What errors are shown?"
 
-      locllm img2md *.png --out-dir ./markdown/
+      labz img2md *.png --out-dir ./markdown/
     """
     from .converter import ImgToMd
 
     if not images:
-        console.print("[yellow]No images provided. Usage: locllm img2md <image.png>[/]")
+        console.print("[yellow]No images provided. Usage: labz img2md <image.png>[/]")
         sys.exit(1)
 
     images = list(images)
@@ -223,7 +223,7 @@ def _img2md_one(converter, *, image_path, out, out_dir, stdout, info,
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# locllm imagine
+# labz imagine
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.command()
@@ -246,18 +246,18 @@ def imagine(
 
     Examples:
 
-      locllm imagine "a golden retriever on a beach at sunset"
+      labz imagine "a golden retriever on a beach at sunset"
 
-      locllm imagine "futuristic city skyline" --out city.png --seed 42
+      labz imagine "futuristic city skyline" --out city.png --seed 42
 
-      locllm imagine "portrait photo" --model stabilityai/stable-diffusion-xl-base-1.0
+      labz imagine "portrait photo" --model stabilityai/stable-diffusion-xl-base-1.0
     """
     from .imagine_backend import generate_image, list_cached_models, DEFAULT_MODEL
 
     if list_cached:
         cached = list_cached_models()
         if not cached:
-            console.print("[dim]No models cached yet. Run locllm imagine to download one.[/]")
+            console.print("[dim]No models cached yet. Run labz imagine to download one.[/]")
         else:
             console.print("[bold]Locally cached image generation models:[/]")
             for m in cached:
@@ -287,7 +287,7 @@ def imagine(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# locllm history
+# labz history
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.group(invoke_without_command=True)
@@ -297,10 +297,10 @@ def history(ctx: click.Context) -> None:
 
     \b
     Examples:
-      locllm history              list all sessions
-      locllm history delete <ID>  delete one session
-      locllm history delete all   delete all sessions
-      locllm history show <ID>    print full transcript
+      labz history              list all sessions
+      labz history delete <ID>  delete one session
+      labz history delete all   delete all sessions
+      labz history show <ID>    print full transcript
     """
     if ctx.invoked_subcommand is None:
         _history_list()
@@ -323,7 +323,7 @@ def history_delete(target: str) -> None:
         if delete_session(target):
             console.print(f"[green]Deleted {target}.[/]")
         else:
-            console.print(f"[red]Not found: {target}[/]  — run 'locllm history' for IDs")
+            console.print(f"[red]Not found: {target}[/]  — run 'labz history' for IDs")
 
 
 @history.command(name="show")
@@ -353,7 +353,7 @@ def _history_list() -> None:
     from .history import list_sessions
     sessions = list_sessions()
     if not sessions:
-        console.print("[dim]No saved sessions. Start one with: locllm chat[/]"); return
+        console.print("[dim]No saved sessions. Start one with: labz chat[/]"); return
     tbl = Table(title="Chat history", box=box.SIMPLE)
     tbl.add_column("ID",              style="cyan",  no_wrap=True)
     tbl.add_column("Date",            style="white", no_wrap=True)
@@ -365,12 +365,12 @@ def _history_list() -> None:
         tbl.add_row(s.id, s.started_dt.strftime("%Y-%m-%d %H:%M"),
                     str(s.message_count), img, s.first_question)
     console.print(tbl)
-    console.print("[dim]locllm history show <ID>    view transcript[/]")
-    console.print("[dim]locllm history delete <ID>  delete session[/]")
+    console.print("[dim]labz history show <ID>    view transcript[/]")
+    console.print("[dim]labz history delete <ID>  delete session[/]")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# locllm models
+# labz models
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.command()
@@ -392,10 +392,10 @@ def models(ollama_url: str) -> None:
         for m in all_ollama:
             if m in vision:
                 mtype = "[green]vision + chat[/]"
-                use   = "locllm img2md --backend ollama  •  locllm chat"
+                use   = "labz img2md --backend ollama  •  labz chat"
             else:
                 mtype = "chat"
-                use   = "locllm chat  •  locllm img2md --ask / --chat"
+                use   = "labz chat  •  labz img2md --ask / --chat"
             tbl.add_row(m, mtype, use)
         console.print(tbl)
     else:
@@ -409,18 +409,18 @@ def models(ollama_url: str) -> None:
         tbl2.add_column("Model",   style="cyan")
         tbl2.add_column("Use with", style="dim")
         for m in cached:
-            tbl2.add_row(m, "locllm imagine")
+            tbl2.add_row(m, "labz imagine")
         console.print(tbl2)
     else:
         console.print("\n[dim]No image generation models cached yet.[/]  "
-                      "Run: locllm imagine \"a prompt\" to auto-download")
+                      "Run: labz imagine \"a prompt\" to auto-download")
 
     if not all_ollama and not cached:
         console.print("\n[bold yellow]Getting started:[/]")
         console.print("  brew install ollama")
         console.print("  ollama pull mistral           # chat")
         console.print("  ollama pull llama3.2-vision   # vision")
-        console.print('  locllm imagine "test prompt"  # downloads SD model')
+        console.print('  labz imagine "test prompt"  # downloads SD model')
 
 
 # ──────────────────────────────────────────────────────────────────────────────

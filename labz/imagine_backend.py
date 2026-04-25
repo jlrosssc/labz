@@ -100,7 +100,7 @@ def generate_image(
     except ImportError:
         raise ImportError(
             "Image generation requires additional packages.\n"
-            "Install with: pip install locllm[imagine]\n"
+            "Install with: pip install labz[imagine]\n"
             "  or: pip install diffusers transformers accelerate torch"
         )
 

@@ -2,7 +2,7 @@
 Persistent chat history for img2md.
 
 Storage layout:
-    ~/.locllm/history/
+    ~/.labz/history/
         <session-id>.json     one file per session
 
 Each session file:
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import List, Optional
 
 
-HISTORY_DIR = Path.home() / ".locllm" / "history"
+HISTORY_DIR = Path.home() / ".labz" / "history"
 
 
 # ---------------------------------------------------------------------------
