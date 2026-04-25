@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: locllm
+Version: 0.1.0
+Summary: Local LLM toolkit — chat, image-to-markdown, image generation, and more
+License: MIT
+Requires-Python: >=3.9
+Requires-Dist: Pillow>=10.0
+Requires-Dist: pytesseract>=0.3.10
+Requires-Dist: numpy>=1.24
+Requires-Dist: click>=8.1
+Requires-Dist: rich>=13.0
+Provides-Extra: ollama
+Requires-Dist: httpx>=0.25; extra == "ollama"
+Provides-Extra: imagine
+Requires-Dist: diffusers>=0.27; extra == "imagine"
+Requires-Dist: transformers>=4.38; extra == "imagine"
+Requires-Dist: accelerate>=0.28; extra == "imagine"
+Requires-Dist: torch>=2.2; extra == "imagine"
+Provides-Extra: all
+Requires-Dist: httpx>=0.25; extra == "all"
+Requires-Dist: diffusers>=0.27; extra == "all"
+Requires-Dist: transformers>=4.38; extra == "all"
+Requires-Dist: accelerate>=0.28; extra == "all"
+Requires-Dist: torch>=2.2; extra == "all"
