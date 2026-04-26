@@ -94,15 +94,28 @@ def _print_home() -> None:
 @click.option("--ollama-url",     default=OLLAMA_URL_DEFAULT, show_default=True)
 def chat(model: Optional[str], private: bool, ollama_url: str) -> None:
     """Chat with a local Ollama model."""
-    from .ollama_backend import chat_session, list_chat_models, _best_chat_model
+    from .ollama_backend import (
+        _best_chat_model,
+        can_reach_ollama,
+        chat_session,
+        ensure_ollama_running,
+        list_chat_models,
+    )
     from .history import new_session
 
+    ensure_ollama_running(ollama_url)
     models = list_chat_models(ollama_url)
     if not models:
-        console.print(
-            "[yellow]Ollama is not running or no models installed.[/]\n"
-            "Run: [bold]brew install ollama && ollama pull mistral[/]"
-        )
+        if can_reach_ollama(ollama_url):
+            console.print(
+                "[yellow]Ollama is running, but no chat models are installed.[/]\n"
+                "Run: [bold]ollama pull mistral[/]"
+            )
+        else:
+            console.print(
+                "[yellow]Ollama is not running.[/]\n"
+                "Run: [bold]ollama serve[/]"
+            )
         sys.exit(1)
 
     chosen = model or _best_chat_model(ollama_url)
@@ -113,7 +126,7 @@ def chat(model: Optional[str], private: bool, ollama_url: str) -> None:
         f"\n[bold cyan]Chat[/] — model: [dim]{chosen}[/]  {privacy}\n"
         "[dim]Type anything. Enter 'exit' or Ctrl+C to quit.[/]\n"
     )
-    chat_session(None, model=chosen, ollama_url=ollama_url, session=None if private else session)
+    chat_session(None, model=chosen, base_url=ollama_url, session=None if private else session)
     console.print("\n[dim]Chat ended.[/]")
     if not private and session.message_count > 0:
         console.print(f"[dim]Session saved: {session.id}[/]")
@@ -227,7 +240,7 @@ def _img2md_one(converter, *, image_path, out, out_dir, stdout, info,
 # ──────────────────────────────────────────────────────────────────────────────
 
 @cli.command()
-@click.argument("prompt")
+@click.argument("prompt", nargs=-1)
 @click.option("--out",    "-o", default=None,    type=click.Path(), help="Output image path (default: generated_<ts>.png).")
 @click.option("--model",  "-m", default=None,    help="HuggingFace model ID (default: stabilityai/sdxl-turbo).")
 @click.option("--width",        default=512,     show_default=True, help="Image width in pixels.")
@@ -264,9 +277,14 @@ def imagine(
                 console.print(f"  • {m}")
         return
 
+    prompt_text = " ".join(prompt).strip()
+    if not prompt_text:
+        console.print("[yellow]No prompt provided. Usage: labz imagine <prompt>[/]")
+        sys.exit(1)
+
     model_id = model or DEFAULT_MODEL
     console.print(f"\n[bold cyan]Generating image[/]")
-    console.print(f"  Prompt : [white]{prompt}[/]")
+    console.print(f"  Prompt : [white]{prompt_text}[/]")
     console.print(f"  Model  : [dim]{model_id}[/]")
     console.print(f"  Size   : [dim]{width}×{height}[/]\n")
 
@@ -279,7 +297,7 @@ def imagine(
     if negative: kwargs["negative_prompt"] = negative
 
     try:
-        saved = generate_image(prompt, **kwargs)
+        saved = generate_image(prompt_text, **kwargs)
         console.print(f"\n[bold green]Saved[/] → {saved}")
     except ImportError as e:
         console.print(f"[red]{e}[/]")
@@ -377,10 +395,11 @@ def _history_list() -> None:
 @click.option("--ollama-url", default=OLLAMA_URL_DEFAULT)
 def models(ollama_url: str) -> None:
     """List all locally available models (Ollama + cached image gen models)."""
-    from .ollama_backend import list_chat_models, list_vision_models
+    from .ollama_backend import can_reach_ollama, ensure_ollama_running, list_chat_models, list_vision_models
     from .imagine_backend import list_cached_models
 
     # Ollama models
+    ensure_ollama_running(ollama_url)
     vision = set(list_vision_models(ollama_url))
     all_ollama = list_chat_models(ollama_url)
 
@@ -399,7 +418,10 @@ def models(ollama_url: str) -> None:
             tbl.add_row(m, mtype, use)
         console.print(tbl)
     else:
-        console.print("[yellow]No Ollama models found.[/]  Run: ollama pull mistral")
+        if can_reach_ollama(ollama_url):
+            console.print("[yellow]Ollama is running, but no models are installed.[/]  Run: ollama pull mistral")
+        else:
+            console.print("[yellow]Ollama is not running.[/]  Run: ollama serve")
 
     # Image generation models
     cached = list_cached_models()
@@ -439,22 +461,40 @@ def _resolve_path(raw: str) -> str:
 
 
 def _do_ask(markdown: str, question: str, *, chat_model: Optional[str], ollama_url: str) -> None:
-    from .ollama_backend import ask_about_markdown, list_chat_models, _best_chat_model
+    from .ollama_backend import (
+        _best_chat_model,
+        ask_about_markdown,
+        can_reach_ollama,
+        ensure_ollama_running,
+        list_chat_models,
+    )
+    ensure_ollama_running(ollama_url)
     if not list_chat_models(ollama_url):
+        if can_reach_ollama(ollama_url):
+            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull mistral[/]"); return
         console.print("[yellow]Ollama not running — cannot answer. Run: ollama serve[/]"); return
     model = chat_model or _best_chat_model(ollama_url)
     console.print(f"\n[bold cyan]Asking[/] [dim]{model}[/]: {question}\n")
     with Progress(SpinnerColumn(), TextColumn("Thinking…"), console=console, transient=True) as p:
         p.add_task("", total=None)
-        answer = ask_about_markdown(markdown, question, model=model, ollama_url=ollama_url)
+        answer = ask_about_markdown(markdown, question, model=model, base_url=ollama_url)
     console.print(Panel(answer, title="Answer", border_style="green", padding=(1, 2)))
 
 
 def _do_img_chat(markdown: str, *, image_path: str, chat_model: Optional[str],
                  ollama_url: str, private: bool) -> None:
-    from .ollama_backend import chat_session, list_chat_models, _best_chat_model
+    from .ollama_backend import (
+        _best_chat_model,
+        can_reach_ollama,
+        chat_session,
+        ensure_ollama_running,
+        list_chat_models,
+    )
     from .history import new_session
+    ensure_ollama_running(ollama_url)
     if not list_chat_models(ollama_url):
+        if can_reach_ollama(ollama_url):
+            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull mistral[/]"); return
         console.print("[yellow]Ollama not running — cannot chat. Run: ollama serve[/]"); return
     model = chat_model or _best_chat_model(ollama_url)
     session = new_session(image_path=image_path, markdown=markdown)
@@ -463,7 +503,7 @@ def _do_img_chat(markdown: str, *, image_path: str, chat_model: Optional[str],
         f"\n[bold cyan]Chat[/] — [dim]{model}[/] {privacy}\n"
         "[dim]Image context loaded. Enter 'exit' or Ctrl+C to quit.[/]\n"
     )
-    chat_session(markdown, model=model, ollama_url=ollama_url,
+    chat_session(markdown, model=model, base_url=ollama_url,
                  session=None if private else session)
     console.print("\n[dim]Chat ended.[/]")
     if not private and session.message_count > 0:

@@ -11,15 +11,15 @@ license = { text = "MIT" }
 dependencies = [
     "Pillow>=10.0",
     "pytesseract>=0.3.10",
-    "numpy>=1.24",
+    "numpy>=1.24,<2",
     "click>=8.1",
     "rich>=13.0",
 ]
 
 [project.optional-dependencies]
 ollama  = ["httpx>=0.25"]
-imagine = ["diffusers>=0.27", "transformers>=4.38", "accelerate>=0.28", "torch>=2.2"]
-all     = ["httpx>=0.25", "diffusers>=0.27", "transformers>=4.38", "accelerate>=0.28", "torch>=2.2"]
+imagine = ["diffusers>=0.29,<0.35", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2,<2.3"]
+all     = ["httpx>=0.25", "diffusers>=0.29,<0.35", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2,<2.3"]
 
 [project.scripts]
 labz = "labz.cli:cli"

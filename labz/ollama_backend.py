@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import base64
 import json
+import subprocess
+import time
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 try:
     import httpx
@@ -44,30 +47,18 @@ Follow these rules:
 
 def is_available(base_url: str = _DEFAULT_URL) -> bool:
     """Return True if Ollama is running and has at least one vision model."""
-    if not _HTTPX_AVAILABLE:
+    models = _fetch_models(base_url, timeout=2.0)
+    if models is None:
         return False
-    try:
-        r = httpx.get(f"{base_url}/api/tags", timeout=2.0)
-        if r.status_code != 200:
-            return False
-        models = [m["name"] for m in r.json().get("models", [])]
-        return any(any(vm in m for vm in _VISION_MODELS) for m in models)
-    except Exception:
-        return False
+    return any(any(vm in m for vm in _VISION_MODELS) for m in models)
 
 
 def list_vision_models(base_url: str = _DEFAULT_URL) -> list[str]:
     """Return names of locally available vision models."""
-    if not _HTTPX_AVAILABLE:
+    models = _fetch_models(base_url, timeout=3.0)
+    if models is None:
         return []
-    try:
-        r = httpx.get(f"{base_url}/api/tags", timeout=3.0)
-        if r.status_code != 200:
-            return []
-        models = [m["name"] for m in r.json().get("models", [])]
-        return [m for m in models if any(vm in m for vm in _VISION_MODELS)]
-    except Exception:
-        return []
+    return [m for m in models if any(vm in m for vm in _VISION_MODELS)]
 
 
 def convert_with_ollama(
@@ -170,15 +161,40 @@ def convert_with_ollama(
 
 def list_chat_models(base_url: str = _DEFAULT_URL) -> list[str]:
     """Return all locally available Ollama models (vision + text)."""
-    if not _HTTPX_AVAILABLE:
+    models = _fetch_models(base_url, timeout=3.0)
+    if models is None:
         return []
+    return models
+
+
+def can_reach_ollama(base_url: str = _DEFAULT_URL) -> bool:
+    """Return True if the Ollama HTTP API is reachable."""
+    return _fetch_models(base_url, timeout=2.0) is not None
+
+
+def ensure_ollama_running(base_url: str = _DEFAULT_URL, startup_timeout: float = 6.0) -> bool:
+    """Try to start a local Ollama server when the API is not reachable."""
+    if can_reach_ollama(base_url):
+        return True
+    if not _is_local_ollama_url(base_url):
+        return False
+
     try:
-        r = httpx.get(f"{base_url}/api/tags", timeout=3.0)
-        if r.status_code != 200:
-            return []
-        return [m["name"] for m in r.json().get("models", [])]
-    except Exception:
-        return []
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except (FileNotFoundError, OSError):
+        return False
+
+    deadline = time.time() + startup_timeout
+    while time.time() < deadline:
+        if can_reach_ollama(base_url):
+            return True
+        time.sleep(0.25)
+    return False
 
 
 def _best_chat_model(base_url: str) -> str:
@@ -374,3 +390,21 @@ def _unwrap_outer_fence(text: str) -> str:
         if len(lines) >= 3:
             return "\n".join(lines[1:-1])
     return text
+
+
+def _fetch_models(base_url: str, timeout: float) -> Optional[list[str]]:
+    """Return model names, [] when reachable but empty, or None when unreachable."""
+    if not _HTTPX_AVAILABLE:
+        return None
+    try:
+        r = httpx.get(f"{base_url}/api/tags", timeout=timeout)
+        if r.status_code != 200:
+            return None
+        return [m["name"] for m in r.json().get("models", [])]
+    except Exception:
+        return None
+
+
+def _is_local_ollama_url(base_url: str) -> bool:
+    host = (urlparse(base_url).hostname or "").lower()
+    return host in {"localhost", "127.0.0.1"}
