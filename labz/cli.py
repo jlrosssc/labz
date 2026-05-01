@@ -67,6 +67,7 @@ def _print_home() -> None:
     tbl.add_row("history", "View, search, and delete saved chat sessions")
     tbl.add_row("models",  "List all locally available models")
     tbl.add_row("clear",   "Wipe all chat history, terminal history, and generated images")
+    tbl.add_row("video",   "Generate a short video from a text prompt (LTX-Video)")
     c.print(tbl)
 
     c.print("\n[bold yellow]QUICK START[/]")
@@ -311,6 +312,67 @@ def imagine(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# labz video
+# ──────────────────────────────────────────────────────────────────────────────
+
+@cli.command()
+@click.argument("prompt", nargs=-1)
+@click.option("--out",      "-o", default=None,  type=click.Path(), help="Output MP4 path (default: generated_video_<ts>.mp4).")
+@click.option("--frames",   "-f", default=121,   show_default=True, help="Number of frames (121 ≈ 5s at 24fps).")
+@click.option("--fps",            default=24,    show_default=True, help="Frames per second.")
+@click.option("--width",          default=704,   show_default=True, help="Frame width (multiple of 32).")
+@click.option("--height",         default=480,   show_default=True, help="Frame height (multiple of 32).")
+@click.option("--steps",          default=50,    show_default=True, help="Inference steps — more = better quality, slower.")
+@click.option("--seed",           default=None,  type=int,          help="Random seed for reproducibility.")
+@click.option("--negative",       default=None,                     help="Negative prompt — things to avoid.")
+def video(prompt, out, frames, fps, width, height, steps, seed, negative) -> None:
+    """Generate a short video from a text prompt using LTX-Video.
+
+    Runs locally on Apple Silicon (MPS), NVIDIA, or CPU.
+    First run downloads the model (~7 GB, cached permanently).
+    Expect 5-10 minutes per clip on Apple Silicon.
+
+    Also requires ffmpeg:  brew install ffmpeg
+
+    Examples:
+
+      labz video "a golden retriever running on a beach"
+
+      labz video "ocean waves crashing" --frames 49 --out waves.mp4
+
+      labz video "timelapse of clouds" --seed 42 --steps 30
+    """
+    from .video_backend import generate_video, DEFAULT_VIDEO_MODEL
+
+    prompt_text = " ".join(prompt).strip()
+    if not prompt_text:
+        console.print("[yellow]No prompt provided. Usage: labz video <prompt>[/]")
+        sys.exit(1)
+
+    duration_s = frames / fps
+    console.print(f"\n[bold cyan]Generating video[/]")
+    console.print(f"  Prompt   : [white]{prompt_text}[/]")
+    console.print(f"  Duration : [dim]{duration_s:.1f}s ({frames} frames at {fps}fps)[/]")
+    console.print(f"  Size     : [dim]{width}×{height}[/]")
+    console.print(f"  Model    : [dim]{DEFAULT_VIDEO_MODEL}[/]\n")
+
+    kwargs: dict = dict(
+        width=width, height=height, num_frames=frames,
+        fps=fps, steps=steps, output_path=out,
+    )
+    if seed:     kwargs["seed"]            = seed
+    if negative: kwargs["negative_prompt"] = negative
+
+    try:
+        saved = generate_video(prompt_text, **kwargs)
+        console.print(f"\n[bold green]Saved[/] → {saved}")
+    except ImportError as e:
+        console.print(f"[red]{e}[/]")
+        sys.exit(1)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # labz history
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -484,7 +546,10 @@ def clear(yes: bool) -> None:
 
     labz_history = Path.home() / ".labz" / "history"
     zsh_history  = Path.home() / ".zsh_history"
-    images       = _glob.glob(str(Path.home() / "Desktop" / "generated_*.png"))
+    images       = (
+        _glob.glob(str(Path.home() / "Desktop" / "generated_*.png")) +
+        _glob.glob(str(Path.home() / "Desktop" / "generated_video_*.mp4"))
+    )
 
     zsh_labz_count = _count_zsh_labz_entries(zsh_history)
 

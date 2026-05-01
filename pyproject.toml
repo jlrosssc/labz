@@ -18,8 +18,9 @@ dependencies = [
 
 [project.optional-dependencies]
 ollama  = ["httpx>=0.25"]
-imagine = ["diffusers>=0.29,<0.35", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2,<2.3"]
-all     = ["httpx>=0.25", "diffusers>=0.29,<0.35", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2,<2.3"]
+imagine = ["diffusers>=0.32", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2"]
+video   = ["diffusers>=0.32", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2", "imageio>=2.28", "imageio-ffmpeg"]
+all     = ["httpx>=0.25", "diffusers>=0.32", "transformers>=4.38,<5", "accelerate>=0.28,<1", "torch>=2.2", "imageio>=2.28", "imageio-ffmpeg"]
 
 [project.scripts]
 labz = "labz.cli:cli"
