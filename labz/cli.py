@@ -520,7 +520,9 @@ def clear(yes: bool) -> None:
     else:
         console.print("[dim]Nothing to clear.[/]")
 
-    console.print("[dim]Close and reopen the terminal to flush the current session history.[/]")
+    console.print("\n[bold yellow]One more step — flush this session's in-memory history:[/]")
+    console.print("[bold green]fc -p /dev/null[/]")
+    console.print("[dim]Run that now, then the up arrow will no longer show labz commands.[/]")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
