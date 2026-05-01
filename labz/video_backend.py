@@ -91,8 +91,12 @@ def generate_video(
         # Stub it out so older torch versions work fine on Apple Silicon.
         if not hasattr(torch, "xpu"):
             class _XPUStub:
-                def empty_cache(self): pass
                 def is_available(self): return False
+                def device_count(self): return 0
+                def empty_cache(self): pass
+                def current_device(self): return 0
+                def __getattr__(self, name):
+                    return lambda *a, **kw: None
             torch.xpu = _XPUStub()
         from diffusers import LTXPipeline
         from diffusers.utils import export_to_video
