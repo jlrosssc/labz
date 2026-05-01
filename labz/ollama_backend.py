@@ -66,7 +66,7 @@ def convert_with_ollama(
     *,
     model: Optional[str] = None,
     base_url: str = _DEFAULT_URL,
-    timeout: float = 120.0,
+    timeout: float = 300.0,
 ) -> str:
     """
     Send *image_path* to a local Ollama vision model and return Markdown.
@@ -209,7 +209,7 @@ def ask_about_markdown(
     *,
     model: Optional[str] = None,
     base_url: str = _DEFAULT_URL,
-    timeout: float = 120.0,
+    timeout: float = 300.0,
 ) -> str:
     """
     Ask a single question about image content that has already been converted
@@ -264,7 +264,7 @@ def chat_session(
     *,
     model: Optional[str] = None,
     base_url: str = _DEFAULT_URL,
-    timeout: float = 120.0,
+    timeout: float = 300.0,
     session=None,        # imgmd.history.ChatSession | None
 ) -> None:
     """
