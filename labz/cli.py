@@ -43,10 +43,15 @@ def cli(ctx: click.Context) -> None:
 
 
 def _print_home() -> None:
+    from importlib.metadata import version as _pkg_version
+    try:
+        _ver = _pkg_version("labz")
+    except Exception:
+        _ver = "0.1.0"
     c = Console()
     c.print()
     c.print(Panel.fit(
-        "[bold cyan]labz[/]  [dim]v0.1.0[/]\n"
+        f"[bold cyan]labz[/]  [dim]v{_ver}[/]\n"
         "[white]Local LLM toolkit — runs entirely on your machine.[/]\n"
         "[dim]No API keys. No cloud. No token costs.[/]",
         border_style="cyan", padding=(0, 2),
@@ -56,7 +61,7 @@ def _print_home() -> None:
     tbl = Table(show_header=False, box=None, padding=(0, 2), show_edge=False)
     tbl.add_column("cmd",  style="cyan",  no_wrap=True, min_width=14)
     tbl.add_column("desc", style="white")
-    tbl.add_row("chat",    "Chat with a local Ollama model (mistral, llama3.2, …)")
+    tbl.add_row("chat",    "Chat with a local Ollama model (qwen2.5:7b)")
     tbl.add_row("img2md",  "Convert screenshots / images to Markdown — save AI tokens")
     tbl.add_row("imagine", "Generate images from text prompts (Stable Diffusion)")
     tbl.add_row("history", "View, search, and delete saved chat sessions")
@@ -78,7 +83,7 @@ def _print_home() -> None:
     c.print("\n[bold yellow]OLLAMA SETUP[/]  [dim](needed for chat and img2md --backend ollama)[/]")
     c.print(
         "  [green]brew install ollama[/]\n"
-        "  [green]ollama pull mistral[/]           [dim]# chat model[/]\n"
+        "  [green]ollama pull qwen2.5:7b[/]        [dim]# chat model[/]\n"
         "  [green]ollama pull llama3.2-vision[/]   [dim]# vision model for img2md[/]\n"
     )
     c.print("[dim]Run 'labz <command> --help' for full options on any command.[/]\n")
@@ -109,7 +114,7 @@ def chat(model: Optional[str], private: bool, ollama_url: str) -> None:
         if can_reach_ollama(ollama_url):
             console.print(
                 "[yellow]Ollama is running, but no chat models are installed.[/]\n"
-                "Run: [bold]ollama pull mistral[/]"
+                "Run: [bold]ollama pull qwen2.5:7b[/]"
             )
         else:
             console.print(
@@ -419,7 +424,7 @@ def models(ollama_url: str) -> None:
         console.print(tbl)
     else:
         if can_reach_ollama(ollama_url):
-            console.print("[yellow]Ollama is running, but no models are installed.[/]  Run: ollama pull mistral")
+            console.print("[yellow]Ollama is running, but no models are installed.[/]  Run: ollama pull qwen2.5:7b")
         else:
             console.print("[yellow]Ollama is not running.[/]  Run: ollama serve")
 
@@ -440,7 +445,7 @@ def models(ollama_url: str) -> None:
     if not all_ollama and not cached:
         console.print("\n[bold yellow]Getting started:[/]")
         console.print("  brew install ollama")
-        console.print("  ollama pull mistral           # chat")
+        console.print("  ollama pull qwen2.5:7b           # chat")
         console.print("  ollama pull llama3.2-vision   # vision")
         console.print('  labz imagine "test prompt"  # downloads SD model')
 
@@ -471,7 +476,7 @@ def _do_ask(markdown: str, question: str, *, chat_model: Optional[str], ollama_u
     ensure_ollama_running(ollama_url)
     if not list_chat_models(ollama_url):
         if can_reach_ollama(ollama_url):
-            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull mistral[/]"); return
+            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull qwen2.5:7b[/]"); return
         console.print("[yellow]Ollama not running — cannot answer. Run: ollama serve[/]"); return
     model = chat_model or _best_chat_model(ollama_url)
     console.print(f"\n[bold cyan]Asking[/] [dim]{model}[/]: {question}\n")
@@ -494,7 +499,7 @@ def _do_img_chat(markdown: str, *, image_path: str, chat_model: Optional[str],
     ensure_ollama_running(ollama_url)
     if not list_chat_models(ollama_url):
         if can_reach_ollama(ollama_url):
-            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull mistral[/]"); return
+            console.print("[yellow]Ollama is running, but no chat models are installed. Run: ollama pull qwen2.5:7b[/]"); return
         console.print("[yellow]Ollama not running — cannot chat. Run: ollama serve[/]"); return
     model = chat_model or _best_chat_model(ollama_url)
     session = new_session(image_path=image_path, markdown=markdown)

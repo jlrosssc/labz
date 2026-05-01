@@ -36,8 +36,8 @@ ollama serve
 In another terminal, pull the models you want:
 
 ```bash
-ollama pull mistral
-ollama pull llama3.2-vision
+ollama pull qwen2.5:7b        # chat model
+ollama pull llama3.2-vision   # vision model for img2md
 ```
 
 ### 3. Install `labz`

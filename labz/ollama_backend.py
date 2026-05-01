@@ -1,14 +1,12 @@
 """
-Optional Ollama backend — uses a local vision model (e.g., llava, llama3.2-vision)
-to convert an image directly to Markdown via a local HTTP API.
-
-This produces much higher quality output than pure OCR for complex layouts,
-diagrams, handwriting, or coloured UI screenshots.
+Optional Ollama backend — uses llama3.2-vision for image-to-Markdown and
+qwen2.5:7b for chat. Both run locally via the Ollama HTTP API.
 
 Requirements:
-    pip install imgmd[ollama]   # pulls in httpx
-    ollama pull llava           # or llama3.2-vision, moondream, etc.
-    ollama serve                # (usually auto-started by Ollama)
+    pip install labz[ollama]          # pulls in httpx
+    ollama pull llama3.2-vision       # vision model
+    ollama pull qwen2.5:7b            # chat model
+    ollama serve                      # (usually auto-started by Ollama)
 """
 
 from __future__ import annotations
@@ -29,7 +27,9 @@ except ImportError:
 
 
 _DEFAULT_URL = "http://localhost:11434"
-_VISION_MODELS = ["llama3.2-vision", "llava", "llava:13b", "llava:34b", "moondream", "bakllava"]
+_CHAT_MODEL   = "qwen2.5:7b"
+_VISION_MODEL = "llama3.2-vision"
+_VISION_MODELS = [_VISION_MODEL]
 
 _SYSTEM_PROMPT = """\
 You are an expert document converter. \
@@ -105,19 +105,10 @@ def convert_with_ollama(
         available = list_vision_models(base_url)
         if not available:
             raise RuntimeError(
-                "No vision models found in Ollama. "
-                "Run: ollama pull llava"
+                f"Vision model not found in Ollama. "
+                f"Run: ollama pull {_VISION_MODEL}"
             )
-        # Prefer llama3.2-vision > llava > anything else
-        for preferred in ["llama3.2-vision", "llava", "moondream"]:
-            for m in available:
-                if preferred in m:
-                    model = m
-                    break
-            if model:
-                break
-        if model is None:
-            model = available[0]
+        model = available[0]
 
     # Read and base64-encode image
     image_data = base64.b64encode(Path(image_path).read_bytes()).decode()
@@ -198,23 +189,18 @@ def ensure_ollama_running(base_url: str = _DEFAULT_URL, startup_timeout: float =
 
 
 def _best_chat_model(base_url: str) -> str:
-    """Pick the best available text/chat model, falling back to any model."""
-    preferred = [
-        "mistral", "mixtral",
-        "llama3.2", "llama3.1", "llama3",
-        "phi4", "phi3", "gemma2", "gemma", "qwen2.5", "qwen2",
-        "deepseek-r1", "deepseek", "llava", "moondream",
-    ]
+    """Return qwen2.5:7b if installed, otherwise raise with install instructions."""
     available = list_chat_models(base_url)
     if not available:
         raise RuntimeError(
-            "No models found in Ollama. Run: ollama pull mistral"
+            f"No models found in Ollama. Run: ollama pull {_CHAT_MODEL}"
         )
-    for pref in preferred:
-        for m in available:
-            if pref in m.lower():
-                return m
-    return available[0]
+    for m in available:
+        if _CHAT_MODEL in m.lower():
+            return m
+    raise RuntimeError(
+        f"Chat model {_CHAT_MODEL!r} not installed. Run: ollama pull {_CHAT_MODEL}"
+    )
 
 
 def ask_about_markdown(
