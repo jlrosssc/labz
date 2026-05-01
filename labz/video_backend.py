@@ -87,6 +87,13 @@ def generate_video(
     """
     try:
         import torch
+        # diffusers >=0.31 references torch.xpu which was added in torch 2.4.
+        # Stub it out so older torch versions work fine on Apple Silicon.
+        if not hasattr(torch, "xpu"):
+            class _XPUStub:
+                def empty_cache(self): pass
+                def is_available(self): return False
+            torch.xpu = _XPUStub()
         from diffusers import LTXPipeline
         from diffusers.utils import export_to_video
     except ImportError:
