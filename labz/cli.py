@@ -66,6 +66,7 @@ def _print_home() -> None:
     tbl.add_row("imagine", "Generate images from text prompts (Stable Diffusion)")
     tbl.add_row("history", "View, search, and delete saved chat sessions")
     tbl.add_row("models",  "List all locally available models")
+    tbl.add_row("clear",   "Wipe all chat history, terminal history, and generated images")
     c.print(tbl)
 
     c.print("\n[bold yellow]QUICK START[/]")
@@ -448,6 +449,64 @@ def models(ollama_url: str) -> None:
         console.print("  ollama pull qwen2.5:7b           # chat")
         console.print("  ollama pull llama3.2-vision   # vision")
         console.print('  labz imagine "test prompt"  # downloads SD model')
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# labz clear
+# ──────────────────────────────────────────────────────────────────────────────
+
+@cli.command()
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
+def clear(yes: bool) -> None:
+    """Wipe all chat history, terminal history, and generated images.
+
+    Removes:
+      - labz chat history  (~/.labz/history/)
+      - zsh history file   (~/.zsh_history)
+      - Generated images   (~/Desktop/generated_*.png)
+
+    Close and reopen the terminal after running to flush session history.
+    """
+    import glob as _glob
+    from pathlib import Path
+
+    labz_history = Path.home() / ".labz" / "history"
+    zsh_history  = Path.home() / ".zsh_history"
+    images       = _glob.glob(str(Path.home() / "Desktop" / "generated_*.png"))
+
+    console.print("\n[bold yellow]This will permanently delete:[/]")
+    console.print(f"  • labz chat history   [dim]{labz_history}[/]")
+    console.print(f"  • zsh history file    [dim]{zsh_history}[/]")
+    console.print(f"  • generated images    [dim]{len(images)} file(s) on Desktop[/]")
+    console.print()
+
+    if not yes:
+        if input("Type 'yes' to confirm: ").strip().lower() != "yes":
+            console.print("[dim]Cancelled.[/]")
+            return
+
+    removed = []
+
+    if labz_history.exists():
+        import shutil
+        shutil.rmtree(labz_history)
+        removed.append("labz chat history")
+
+    if zsh_history.exists():
+        zsh_history.write_text("")
+        removed.append("zsh history file")
+
+    for img in images:
+        Path(img).unlink(missing_ok=True)
+    if images:
+        removed.append(f"{len(images)} generated image(s)")
+
+    if removed:
+        console.print("[bold green]Cleared:[/] " + ", ".join(removed))
+    else:
+        console.print("[dim]Nothing to clear.[/]")
+
+    console.print("[dim]Close and reopen the terminal to flush the current session history.[/]")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
