@@ -455,17 +455,29 @@ def models(ollama_url: str) -> None:
 # labz clear
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _count_zsh_labz_entries(zsh_history_path) -> int:
+    if not zsh_history_path.exists():
+        return 0
+    return sum(1 for line in zsh_history_path.read_text(errors="replace").splitlines()
+               if "labz" in line)
+
+
+def _remove_zsh_labz_entries(zsh_history_path) -> None:
+    lines = zsh_history_path.read_text(errors="replace").splitlines(keepends=True)
+    kept = [l for l in lines if "labz" not in l]
+    zsh_history_path.write_text("".join(kept))
+
 @cli.command()
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
 def clear(yes: bool) -> None:
-    """Wipe all chat history, terminal history, and generated images.
+    """Wipe labz chat history, labz entries from zsh history, and generated images.
 
     Removes:
-      - labz chat history  (~/.labz/history/)
-      - zsh history file   (~/.zsh_history)
-      - Generated images   (~/Desktop/generated_*.png)
+      - labz chat history              (~/.labz/history/)
+      - labz lines from zsh history    (~/.zsh_history, non-labz lines preserved)
+      - Generated images               (~/Desktop/generated_*.png)
 
-    Close and reopen the terminal after running to flush session history.
+    Close and reopen the terminal after running to flush the current session.
     """
     import glob as _glob
     from pathlib import Path
@@ -474,10 +486,12 @@ def clear(yes: bool) -> None:
     zsh_history  = Path.home() / ".zsh_history"
     images       = _glob.glob(str(Path.home() / "Desktop" / "generated_*.png"))
 
+    zsh_labz_count = _count_zsh_labz_entries(zsh_history)
+
     console.print("\n[bold yellow]This will permanently delete:[/]")
-    console.print(f"  • labz chat history   [dim]{labz_history}[/]")
-    console.print(f"  • zsh history file    [dim]{zsh_history}[/]")
-    console.print(f"  • generated images    [dim]{len(images)} file(s) on Desktop[/]")
+    console.print(f"  • labz chat history        [dim]{labz_history}[/]")
+    console.print(f"  • labz entries in zsh log  [dim]{zsh_labz_count} line(s) in {zsh_history}[/]")
+    console.print(f"  • generated images         [dim]{len(images)} file(s) on Desktop[/]")
     console.print()
 
     if not yes:
@@ -492,9 +506,9 @@ def clear(yes: bool) -> None:
         shutil.rmtree(labz_history)
         removed.append("labz chat history")
 
-    if zsh_history.exists():
-        zsh_history.write_text("")
-        removed.append("zsh history file")
+    if zsh_history.exists() and zsh_labz_count > 0:
+        _remove_zsh_labz_entries(zsh_history)
+        removed.append(f"{zsh_labz_count} labz zsh entry(s)")
 
     for img in images:
         Path(img).unlink(missing_ok=True)
